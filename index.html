@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Towards Real-Time Musical Agents</title>
+  <style>
+    :root {
+      --accent: #4a6fa5;
+      --accent-dark: #2d4a7a;
+      --bg: #ffffff;
+      --bg-alt: #f6f8fb;
+      --border: #dde3ec;
+      --text: #1a1a2e;
+      --text-muted: #555;
+      --retro-color: #2e7d32;
+      --immediate-color: #616161;
+      --lookahead-color: #c0392b;
+      --radius: 8px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Georgia', serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      color: #fff;
+      text-align: center;
+      padding: 56px 24px 48px;
+    }
+    header h1 {
+      font-size: clamp(1.4rem, 3vw, 2.1rem);
+      font-weight: 700;
+      line-height: 1.35;
+      max-width: 1000px;
+      margin: 0 auto 20px;
+      letter-spacing: -0.2px;
+    }
+    .authors {
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+      opacity: 1;
+      color: #ffffff;
+      font-weight: 600;
+    }
+    .affiliation {
+      font-size: 0.92rem;
+      opacity: 1;
+      color: #e8eaf0;
+      margin-bottom: 28px;
+      font-style: italic;
+    }
+    .badge-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 7px 18px;
+      border-radius: 20px;
+      border: 1.5px solid rgba(255,255,255,0.35);
+      color: #fff;
+      text-decoration: none;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: background 0.2s, border-color 0.2s;
+      background: rgba(255,255,255,0.07);
+    }
+    .badge:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.6); }
+    .badge svg { width:16px; height:16px; fill: currentColor; flex-shrink: 0; }
+
+    /* ── Layout ── */
+    main { max-width: 1200px; margin: 0 auto; padding: 0 20px 80px; }
+
+    section { margin-top: 60px; }
+    section:first-child { margin-top: 48px; }
+
+    h2 {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 1.45rem;
+      font-weight: 700;
+      color: var(--accent-dark);
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 24px;
+    }
+    h3 {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 14px;
+      color: var(--text);
+    }
+
+    p { margin-bottom: 16px; color: var(--text-muted); font-size: 0.97rem; }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Figures ── */
+    .figure-wrap {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .figure-wrap img {
+      max-width: 90%;
+      border-radius: 4px;
+    }
+    figcaption {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 12px;
+      line-height: 1.5;
+      text-align: left;
+    }
+    figcaption strong { color: var(--text); }
+
+    /* ── Condition tabs ── */
+    .model-block { margin-bottom: 48px; }
+    .model-title {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 1.18rem;
+      font-weight: 700;
+      color: #fff;
+      background: var(--accent-dark);
+      padding: 10px 20px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      margin-bottom: 0;
+    }
+    .model-inner {
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 var(--radius) var(--radius);
+      overflow: hidden;
+    }
+
+    .condition-block {
+      border-bottom: 1px solid var(--border);
+    }
+    .condition-block:last-child { border-bottom: none; }
+
+    .condition-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 14px 20px;
+      background: var(--bg-alt);
+      cursor: pointer;
+      user-select: none;
+    }
+    .condition-header:hover { background: #edf1f7; }
+
+    .cond-pill {
+      display: inline-block;
+      padding: 3px 12px;
+      border-radius: 12px;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .cond-retro    { background: var(--retro-color); }
+    .cond-immediate{ background: var(--immediate-color); }
+    .cond-lookahead{ background: var(--lookahead-color); }
+
+    .condition-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+    .condition-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+    .chevron {
+      margin-left: 8px;
+      font-size: 0.8rem;
+      transition: transform 0.2s;
+      color: var(--text-muted);
+    }
+    .condition-block.open .chevron { transform: rotate(180deg); }
+
+    .condition-body {
+      display: none;
+      padding: 20px 20px 24px;
+    }
+    .condition-block.open .condition-body { display: block; }
+
+    /* ── Audio table ── */
+    .audio-note {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      font-style: italic;
+    }
+
+    .audio-table-wrap { overflow-x: auto; }
+
+    .audio-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.88rem;
+      table-layout: fixed;
+    }
+    .audio-table th.col-instrument,
+    .audio-table td.instrument-name { width: 120px; }
+    .audio-table th:not(.col-instrument),
+    .audio-table td:not(.instrument-name) { width: auto; }
+    .audio-table th {
+      background: #edf1f7;
+      color: var(--text);
+      font-weight: 700;
+      padding: 9px 12px;
+      text-align: center;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .audio-table th.col-instrument {
+      text-align: left;
+      background: #e2e8f4;
+    }
+    .audio-table td {
+      border: 1px solid var(--border);
+      padding: 10px 10px;
+      vertical-align: middle;
+      text-align: center;
+    }
+    .audio-table td.instrument-name {
+      font-weight: 700;
+      text-align: left;
+      padding-left: 14px;
+      color: var(--text);
+      background: var(--bg-alt);
+      white-space: nowrap;
+    }
+    .instrument-icon { height: 60px; width: auto; margin-right: 8px; vertical-align: middle; }
+
+    audio {
+      width: 100%;
+      height: 32px;
+      display: block;
+      margin: 0 auto;
+    }
+    /* Smaller audio on small screens */
+    @media (max-width: 640px) {
+      audio { width: 130px; }
+    }
+
+    /* ── Original section ── */
+    .original-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .original-card {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+      text-align: center;
+    }
+    .original-card .instr-label {
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+    .original-card audio { width: 100%; }
+
+    /* ── Video section ── */
+    .video-placeholder {
+      background: var(--bg-alt);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      padding: 60px 24px;
+      text-align: center;
+      color: var(--text-muted);
+      font-family: 'Helvetica Neue', sans-serif;
+    }
+    .video-placeholder .icon { font-size: 2.5rem; margin-bottom: 12px; }
+    .video-placeholder p { margin: 0; font-size: 0.95rem; }
+
+    .video-embed {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      overflow: hidden;
+      border-radius: var(--radius);
+      background: #000;
+    }
+    .video-embed iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: none;
+    }
+
+    /* ── Results ── */
+    .results-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.88rem;
+      margin-bottom: 24px;
+    }
+    .results-table th {
+      background: #edf1f7;
+      padding: 9px 14px;
+      text-align: center;
+      border: 1px solid var(--border);
+      font-weight: 700;
+    }
+    .results-table th:first-child { text-align: left; }
+    .results-table td {
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      text-align: center;
+    }
+    .results-table td:first-child { text-align: left; font-weight: 600; }
+    .results-table tr:nth-child(even) td { background: var(--bg-alt); }
+    .check { color: var(--retro-color); font-weight: 700; }
+    .cross { color: var(--lookahead-color); font-weight: 700; }
+
+    /* ── Footer ── */
+    footer {
+      text-align: center;
+      padding: 32px 20px;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.83rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border);
+      margin-top: 60px;
+    }
+
+    /* ── WaveSurfer players ── */
+    .ws-player {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+      padding: 4px 0;
+    }
+    .ws-play-btn {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--accent);
+      color: #fff;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+    .ws-play-btn:hover { background: var(--accent-dark); }
+    .ws-wave {
+      flex: 1;
+      min-width: 0;
+      height: 40px;
+      cursor: pointer;
+    }
+    .ws-wave canvas { display: block; }
+    .ws-time {
+      flex-shrink: 0;
+      font-family: 'Helvetica Neue', sans-serif;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      min-width: 32px;
+      text-align: right;
+    }
+    .ws-loading {
+      flex: 1;
+      height: 40px;
+      background: repeating-linear-gradient(
+        90deg, var(--border) 0px, var(--border) 4px, transparent 4px, transparent 8px
+      );
+      border-radius: 2px;
+      opacity: 0.5;
+    }
+  </style>
+  <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
+</head>
+<body>
+
+<!-- ══════════════════ HEADER ══════════════════ -->
+<header>
+  <h1>Towards Real-Time Musical Agents:<br>Instrumental Accompaniment with Latent Diffusion Models and MAX/MSP</h1>
+  <p class="authors">Tornike Karchkhadze &nbsp;&bull;&nbsp; Shlomo Dubnov</p>
+  <p class="affiliation">University of California San Diego</p>
+  <div class="badge-row">
+    <a class="badge" href="https://arxiv.org/abs/XXXX.XXXXX" target="_blank">
+      <!-- arxiv icon -->
+      <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
+      Paper
+    </a>
+    <a class="badge" href="https://github.com/karchkha/musical-accompaniment-ldm" target="_blank">
+      <!-- github icon -->
+      <svg viewBox="0 0 24 24"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.31 3.435 9.818 8.205 11.405.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.744.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.604-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.5 24 5.87 18.627.5 12 .5z"/></svg>
+      LDM model Python Code
+    </a>
+    <a class="badge" href="https://github.com/karchkha/multi_track" target="_blank">
+      <svg viewBox="0 0 24 24"><path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.31 3.435 9.818 8.205 11.405.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.744.083-.729.083-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.604-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.5 24 5.87 18.627.5 12 .5z"/></svg>
+      MAX/MSP and C++ Code
+    </a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══════════════════ ABSTRACT ══════════════════ -->
+  <section id="abstract">
+    <h2>Abstract</h2>
+    <p>
+      We propose a framework for a real-time instrumental accompaniment and improvisation system.
+      The project is twofold: we develop a diffusion-based generative model for musical accompaniment,
+      and we build a hybrid system that enables real-time interaction with this model by combining
+      MAX/MSP with a remote Python server. We train our latent diffusion model with look-ahead conditioning
+      and deploy it on a Python server. The MAX/MSP frontend handles real-time audio input, buffering,
+      and playback, communicating with the server via OSC messages.
+    </p>
+    <p>
+      This setup enables a musician to plug in and play live within MAX/MSP, while the ML model listens
+      and responds with complementary instrumental parts. We demonstrate inherent trade-offs between
+      offline and real-time regimes: while offline generation offers better coherence, real-time operation
+      requires faster inference and suffers from reduced quality. To address latency bottlenecks, we apply
+      consistency distillation to enable faster, low-latency inference.
+      The fastest configuration achieves real-time performance by generating 2&times;<em>X</em> seconds
+      of look-ahead audio in <em>X</em> seconds.
+    </p>
+  </section>
+
+
+  <!-- ══════════════════ SYSTEM OVERVIEW ══════════════════ -->
+  <section id="system">
+    <h2>System Overview</h2>
+    <div class="figure-wrap">
+      <img src="images/latent.drawio.png" alt="Latent diffusion model" style="max-width: 90%;" />
+      <figcaption>
+        <strong>Accompaniment generation with a latent diffusion model.</strong>
+        Input audio is encoded into a 64&times;64 latent representation via Music2Latent encoder E.
+        A U-Net diffusion model conditioned on the mixture latent and a one-hot instrument label
+        performs iterative denoising. Decoder D reconstructs the target stem waveform.
+        Temporal masking (striped regions) enables look-ahead generation during both training and inference.
+      </figcaption>
+    </div>
+    <div class="figure-wrap">
+      <img src="images/Real_time_graph.drawio.png" alt="Sliding-window streaming protocol" style="max-width: 80%;" />
+      <figcaption>
+        <strong>Sliding-window protocol for real-time accompaniment generation.</strong>
+        Three regimes are illustrated corresponding to look-ahead depths
+        <em>w</em> &isin; {&minus;1, 0, 1}:
+        <span style="color:var(--retro-color);font-weight:700">Retrospective</span> — prediction on already observed content (offline upper bound);
+        <span style="color:var(--immediate-color);font-weight:700">Immediate</span> — prediction without look-ahead (impractical under non-negligible inference latency);
+        <span style="color:var(--lookahead-color);font-weight:700">Look-ahead</span> — future audio generated ahead of playback time, enabling real-time streaming.
+      </figcaption>
+    </div>
+  </section>
+
+
+  <!-- ══════════════════ AUDIO EXAMPLES ══════════════════ -->
+  <section id="audio">
+    <h2>Audio Examples</h2>
+    <p>
+      All examples are generated from a single held-out test track from the
+      <a href="https://zenodo.org/record/4599666" target="_blank">Slakh2100</a> dataset,
+      using step ratio <strong><em>r</em> = 0.25</strong> and 6-second context window.
+      For each condition, we show the generated stem alongside the full mix
+      (generated stem + input context). The ground truth stems are shown once below for reference.
+    </p>
+    <p>
+      The excerpt is a MIDI rendition of <strong><em>I Will Survive</em></strong> by <strong>Gloria Gaynor</strong>,
+      seconds 24–55. We deliberately chose this passage for its musical contrast: it opens with a sparse
+      moment where only the piano plays, then transitions into a full rhythmic section with all instruments.
+      This makes it a challenging and revealing test for the model across all three conditions.
+    </p>
+
+    <!-- Full mix -->
+    <div style="margin-bottom:28px;">
+      <h3>Full Mix (Ground Truth)</h3>
+      <p style="margin-bottom:10px;">The complete mixture of all four stems — this is the piece the models are learning to accompany.</p>
+      <div class="original-card" style="text-align:left; display:flex; align-items:center; gap:16px; padding:16px 20px;">
+        <span style="font-family:'Helvetica Neue',sans-serif; font-size:0.95rem; font-weight:700; white-space:nowrap;">Full Mix</span>
+        <div class="ws-player" data-src="audio/original/full_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div>
+      </div>
+    </div>
+
+    <!-- Original stems -->
+    <div style="margin-bottom:36px;">
+      <h3>Ground Truth Stems</h3>
+      <div class="original-grid">
+        <div class="original-card">
+          <div class="instr-label"><img class="instrument-icon" src="images/icons/drums.png" alt="Drums"> Drums</div>
+          <div class="ws-player" data-src="audio/original/drums.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div>
+        </div>
+        <div class="original-card">
+          <div class="instr-label"><img class="instrument-icon" src="images/icons/bass.png" alt="Bass"> Bass</div>
+          <div class="ws-player" data-src="audio/original/bass.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div>
+        </div>
+        <div class="original-card">
+          <div class="instr-label"><img class="instrument-icon" src="images/icons/guitar.png" alt="Guitar"> Guitar</div>
+          <div class="ws-player" data-src="audio/original/guitar.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div>
+        </div>
+        <div class="original-card">
+          <div class="instr-label"><img class="instrument-icon" src="images/icons/piano.png" alt="Piano"> Piano</div>
+          <div class="ws-player" data-src="audio/original/piano.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Diffusion Model ── -->
+    <div class="model-block">
+      <div class="model-title">Diffusion Model &nbsp;<span style="font-weight:400;opacity:0.75;font-size:0.9rem">(LDM, 5 denoising steps &middot; ~981 ms cycle)</span></div>
+      <div class="model-inner">
+
+        <!-- Retrospective -->
+        <div class="condition-block open" id="diff-retro">
+          <div class="condition-header" onclick="toggleCondition('diff-retro')">
+            <span class="cond-pill cond-retro">Retrospective</span>
+            <span class="condition-label">w = &minus;1 &nbsp;&middot;&nbsp; Offline upper bound</span>
+            <span class="condition-desc">Full context available</span>
+            <span class="chevron">▼</span>
+          </div>
+          <div class="condition-body">
+            <p class="audio-note">Model generates each instrument with complete past and future context visible — best achievable quality.</p>
+            <div class="audio-table-wrap">
+              <table class="audio-table">
+                <thead>
+                  <tr>
+                    <th class="col-instrument">Instrument</th>
+                    <th>Ground Truth</th>
+                    <th>Generated Stem</th>
+                    <th>Mix (Generated + Context)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/drums.png" alt="Drums">Drums</td>
+                    <td><div class="ws-player" data-src="audio/original/drums.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/drums_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/drums_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/bass.png" alt="Bass">Bass</td>
+                    <td><div class="ws-player" data-src="audio/original/bass.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/bass_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/bass_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/guitar.png" alt="Guitar">Guitar</td>
+                    <td><div class="ws-player" data-src="audio/original/guitar.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/guitar_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/guitar_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/piano.png" alt="Piano">Piano</td>
+                    <td><div class="ws-player" data-src="audio/original/piano.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/piano_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/retro/piano_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Immediate -->
+        <div class="condition-block" id="diff-immediate">
+          <div class="condition-header" onclick="toggleCondition('diff-immediate')">
+            <span class="cond-pill cond-immediate">Immediate</span>
+            <span class="condition-label">w = 0 &nbsp;&middot;&nbsp; No look-ahead</span>
+            <span class="condition-desc">Causal outpainting</span>
+            <span class="chevron">▼</span>
+          </div>
+          <div class="condition-body">
+            <p class="audio-note">Model generates the next segment with no future visibility — impractical for live use as inference time exceeds audio buffer duration.</p>
+            <div class="audio-table-wrap">
+              <table class="audio-table">
+                <thead>
+                  <tr>
+                    <th class="col-instrument">Instrument</th>
+                    <th>Ground Truth</th>
+                    <th>Generated Stem</th>
+                    <th>Mix (Generated + Context)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/drums.png" alt="Drums">Drums</td>
+                    <td><div class="ws-player" data-src="audio/original/drums.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/drums_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/drums_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/bass.png" alt="Bass">Bass</td>
+                    <td><div class="ws-player" data-src="audio/original/bass.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/bass_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/bass_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/guitar.png" alt="Guitar">Guitar</td>
+                    <td><div class="ws-player" data-src="audio/original/guitar.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/guitar_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/guitar_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/piano.png" alt="Piano">Piano</td>
+                    <td><div class="ws-player" data-src="audio/original/piano.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/piano_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/immediate/piano_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Look-ahead -->
+        <div class="condition-block" id="diff-lookahead">
+          <div class="condition-header" onclick="toggleCondition('diff-lookahead')">
+            <span class="cond-pill cond-lookahead">Look-ahead</span>
+            <span class="condition-label">w = 1 &nbsp;&middot;&nbsp; Real-time streaming</span>
+            <span class="condition-desc">Future audio generated ahead of playback</span>
+            <span class="chevron">▼</span>
+          </div>
+          <div class="condition-body">
+            <p class="audio-note">Model predicts future segments ahead of playback time, enabling uninterrupted real-time accompaniment. Satisfies real-time constraint at r = 0.25 (981 ms &lt; 1500 ms step).</p>
+            <div class="audio-table-wrap">
+              <table class="audio-table">
+                <thead>
+                  <tr>
+                    <th class="col-instrument">Instrument</th>
+                    <th>Ground Truth</th>
+                    <th>Generated Stem</th>
+                    <th>Mix (Generated + Context)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/drums.png" alt="Drums">Drums</td>
+                    <td><div class="ws-player" data-src="audio/original/drums.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/drums_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/drums_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/bass.png" alt="Bass">Bass</td>
+                    <td><div class="ws-player" data-src="audio/original/bass.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/bass_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/bass_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/guitar.png" alt="Guitar">Guitar</td>
+                    <td><div class="ws-player" data-src="audio/original/guitar.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/guitar_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/guitar_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/piano.png" alt="Piano">Piano</td>
+                    <td><div class="ws-player" data-src="audio/original/piano.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/piano_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/diffusion/lookahead/piano_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /model-inner -->
+    </div><!-- /Diffusion model-block -->
+
+
+    <!-- ── CD Model ── -->
+    <div class="model-block">
+      <div class="model-title" style="background:#5a3e8a;">Consistency Distillation Model &nbsp;<span style="font-weight:400;opacity:0.75;font-size:0.9rem">(CD, 2 steps &middot; ~589 ms cycle &middot; 1.66&times; faster)</span></div>
+      <div class="model-inner">
+
+        <!-- Retrospective -->
+        <div class="condition-block open" id="cd-retro">
+          <div class="condition-header" onclick="toggleCondition('cd-retro')">
+            <span class="cond-pill cond-retro">Retrospective</span>
+            <span class="condition-label">w = &minus;1 &nbsp;&middot;&nbsp; Offline upper bound</span>
+            <span class="condition-desc">Full context available</span>
+            <span class="chevron">▼</span>
+          </div>
+          <div class="condition-body">
+            <p class="audio-note">CD model with full context. Slightly lower quality than diffusion in this regime, but still strong.</p>
+            <div class="audio-table-wrap">
+              <table class="audio-table">
+                <thead>
+                  <tr>
+                    <th class="col-instrument">Instrument</th>
+                    <th>Ground Truth</th>
+                    <th>Generated Stem</th>
+                    <th>Mix (Generated + Context)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/drums.png" alt="Drums">Drums</td>
+                    <td><div class="ws-player" data-src="audio/original/drums.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/drums_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/drums_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/bass.png" alt="Bass">Bass</td>
+                    <td><div class="ws-player" data-src="audio/original/bass.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/bass_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/bass_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/guitar.png" alt="Guitar">Guitar</td>
+                    <td><div class="ws-player" data-src="audio/original/guitar.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/guitar_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/guitar_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/piano.png" alt="Piano">Piano</td>
+                    <td><div class="ws-player" data-src="audio/original/piano.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/piano_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/retro/piano_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Immediate -->
+        <div class="condition-block" id="cd-immediate">
+          <div class="condition-header" onclick="toggleCondition('cd-immediate')">
+            <span class="cond-pill cond-immediate">Immediate</span>
+            <span class="condition-label">w = 0 &nbsp;&middot;&nbsp; No look-ahead</span>
+            <span class="condition-desc">Causal outpainting</span>
+            <span class="chevron">▼</span>
+          </div>
+          <div class="condition-body">
+            <p class="audio-note">CD model without look-ahead. Thanks to reduced inference time, this condition is closer to practical real-time use than the diffusion model.</p>
+            <div class="audio-table-wrap">
+              <table class="audio-table">
+                <thead>
+                  <tr>
+                    <th class="col-instrument">Instrument</th>
+                    <th>Ground Truth</th>
+                    <th>Generated Stem</th>
+                    <th>Mix (Generated + Context)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/drums.png" alt="Drums">Drums</td>
+                    <td><div class="ws-player" data-src="audio/original/drums.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/drums_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/drums_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/bass.png" alt="Bass">Bass</td>
+                    <td><div class="ws-player" data-src="audio/original/bass.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/bass_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/bass_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/guitar.png" alt="Guitar">Guitar</td>
+                    <td><div class="ws-player" data-src="audio/original/guitar.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/guitar_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/guitar_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/piano.png" alt="Piano">Piano</td>
+                    <td><div class="ws-player" data-src="audio/original/piano.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/piano_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/immediate/piano_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Look-ahead -->
+        <div class="condition-block" id="cd-lookahead">
+          <div class="condition-header" onclick="toggleCondition('cd-lookahead')">
+            <span class="cond-pill cond-lookahead">Look-ahead</span>
+            <span class="condition-label">w = 1 &nbsp;&middot;&nbsp; Real-time streaming</span>
+            <span class="condition-desc">Future audio generated ahead of playback</span>
+            <span class="chevron">▼</span>
+          </div>
+          <div class="condition-body">
+            <p class="audio-note">CD model with look-ahead. Satisfies real-time constraint even at r = 0.125 (497 ms &lt; 750 ms), giving finer-grained temporal updates than the diffusion model.</p>
+            <div class="audio-table-wrap">
+              <table class="audio-table">
+                <thead>
+                  <tr>
+                    <th class="col-instrument">Instrument</th>
+                    <th>Ground Truth</th>
+                    <th>Generated Stem</th>
+                    <th>Mix (Generated + Context)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/drums.png" alt="Drums">Drums</td>
+                    <td><div class="ws-player" data-src="audio/original/drums.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/drums_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/drums_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/bass.png" alt="Bass">Bass</td>
+                    <td><div class="ws-player" data-src="audio/original/bass.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/bass_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/bass_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/guitar.png" alt="Guitar">Guitar</td>
+                    <td><div class="ws-player" data-src="audio/original/guitar.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/guitar_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/guitar_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                  <tr>
+                    <td class="instrument-name"><img class="instrument-icon" src="images/icons/piano.png" alt="Piano">Piano</td>
+                    <td><div class="ws-player" data-src="audio/original/piano.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/piano_gen.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                    <td><div class="ws-player" data-src="audio/cd/lookahead/piano_mix.wav"><button class="ws-play-btn">&#9654;</button><div class="ws-wave"></div><span class="ws-time">0:00</span></div></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /model-inner -->
+    </div><!-- /CD model-block -->
+
+  </section>
+
+
+  <!-- ══════════════════ VIDEO DEMO ══════════════════ -->
+  <section id="video">
+    <h2>MAX/MSP Live Demo</h2>
+    <p>
+      The following video demonstrates the real-time system in operation: a musician performs live
+      within the MAX/MSP patch while the AI model listens and generates complementary instrumental parts.
+    </p>
+
+    <!--
+      TO ADD YOUR VIDEO:
+      Option A — YouTube embed: replace the src below with your YouTube embed URL
+        <div class="video-embed">
+          <iframe src="https://www.youtube.com/embed/YOUR_VIDEO_ID" allowfullscreen></iframe>
+        </div>
+
+      Option B — local video file:
+        <video controls style="width:100%;border-radius:8px;">
+          <source src="video/demo.mp4" type="video/mp4">
+        </video>
+
+      Remove the placeholder div below once the video is added.
+    -->
+    <div class="video-placeholder">
+      <div class="icon">🎬</div>
+      <p><strong>Video coming soon.</strong><br>Replace this placeholder in <code>index.html</code> with your YouTube embed or local video file.</p>
+    </div>
+  </section>
+
+
+
+</main>
+
+<footer>
+  Tornike Karchkhadze &amp; Shlomo Dubnov &nbsp;&bull;&nbsp; UC San Diego
+</footer>
+
+<script>
+  // ── WaveSurfer lazy init ──────────────────────────────────────────────────
+  const waveColor     = '#a0b4cc';
+  const progressColor = '#4a6fa5';
+
+  function initPlayersIn(container) {
+    container.querySelectorAll('.ws-player:not([data-ws-init])').forEach(player => {
+      player.setAttribute('data-ws-init', '1');
+      const src     = player.dataset.src;
+      const btn     = player.querySelector('.ws-play-btn');
+      const waveDiv = player.querySelector('.ws-wave');
+      const timeEl  = player.querySelector('.ws-time');
+
+      const ws = WaveSurfer.create({
+        container:     waveDiv,
+        url:           src,
+        waveColor:     waveColor,
+        progressColor: progressColor,
+        height:        40,
+        barWidth:      2,
+        barGap:        1,
+        barRadius:     2,
+        interact:      true,
+        normalize:     true,
+      });
+
+      ws.on('ready', () => {
+        const dur = ws.getDuration();
+        timeEl.textContent = formatTime(dur);
+      });
+      ws.on('timeupdate', t => {
+        timeEl.textContent = formatTime(t);
+      });
+      ws.on('play',  () => { btn.innerHTML = '&#9646;&#9646;'; });
+      ws.on('pause', () => { btn.innerHTML = '&#9654;'; });
+      ws.on('finish',() => { btn.innerHTML = '&#9654;'; });
+
+      btn.addEventListener('click', () => ws.playPause());
+    });
+  }
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = String(Math.floor(s % 60)).padStart(2, '0');
+    return m + ':' + sec;
+  }
+
+  // Init players in open sections on load
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.condition-block.open').forEach(initPlayersIn);
+    // also init the always-visible players (full mix, original cards)
+    initPlayersIn(document.querySelector('#audio'));
+  });
+
+  // Init players when a section is opened
+  function toggleCondition(id) {
+    const block = document.getElementById(id);
+    block.classList.toggle('open');
+    if (block.classList.contains('open')) {
+      initPlayersIn(block);
+    }
+  }
+</script>
+
+</body>
+</html>
