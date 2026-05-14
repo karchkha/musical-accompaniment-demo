@@ -441,15 +441,6 @@
       and deploy it on a Python server. The MAX/MSP frontend handles real-time audio input, buffering,
       and playback, communicating with the server via OSC messages.
     </p>
-    <p>
-      This setup enables a musician to plug in and play live within MAX/MSP, while the ML model listens
-      and responds with complementary instrumental parts. We demonstrate inherent trade-offs between
-      offline and real-time regimes: while offline generation offers better coherence, real-time operation
-      requires faster inference and suffers from reduced quality. To address latency bottlenecks, we apply
-      consistency distillation to enable faster, low-latency inference.
-      The fastest configuration achieves real-time performance by generating 2&times;<em>X</em> seconds
-      of look-ahead audio in <em>X</em> seconds.
-    </p>
   </section>
 
 
